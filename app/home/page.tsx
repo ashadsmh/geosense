@@ -115,7 +115,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="relative z-10 text-center text-xs text-gray-400 py-6 border-t border-gray-100 mt-auto">
-        GeoSense · Powered by USGS · NOAA · EPA · Groq AI
+        GeoSense · Powered by USGS · NOAA · EPA · Gemini AI
       </footer>
     </main>
   );
