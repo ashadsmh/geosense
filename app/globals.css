@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+  }
+}
+
+body {
+  background-color: theme('colors.slate.50');
+  color: theme('colors.slate.900');
+}
+
+@media print {
+  #geosense-nav,
+  #export-btn,
+  #lot-diagram-section,
+  #report-stepper,
+  .scroll-arrow {
+    display: none !important;
+  }
+  
+  #pdf-header,
+  #pdf-map-placeholder {
+    display: block !important;
+  }
+  
+  [data-step] {
+    min-height: auto !important;
+    overflow: visible !important;
+    page-break-inside: avoid;
+  }
+  
+  .no-break {
+    page-break-inside: avoid;
+  }
+  
+  body {
+    background: white !important;
+  }
+  
+  * {
+    box-shadow: none !important;
+  }
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+
+@keyframes gridMove {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 40px; }
+}
