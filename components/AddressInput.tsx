@@ -10,16 +10,16 @@ export default function AddressInput({
   defaultAddress = '',
   defaultHomeSizeSqft = 20000,
   defaultHeatingFuel = 'gas',
-  defaultAnnualEnergyCost = 18000,
-  disableTypewriter = false,
-  enableHomepageTypewriter = false
+  defaultEnergyCost = 18000,
+  defaultLotSize = 50000,
+  disableTypewriter = false
 }: { 
   defaultAddress?: string;
   defaultHomeSizeSqft?: string | number;
   defaultHeatingFuel?: string;
-  defaultAnnualEnergyCost?: string | number;
+  defaultEnergyCost?: string | number;
+  defaultLotSize?: string | number;
   disableTypewriter?: boolean;
-  enableHomepageTypewriter?: boolean;
 }) {
   const router = useRouter();
   const { isLoaded } = useLoadScript({
@@ -31,27 +31,30 @@ export default function AddressInput({
   const [placeholderText, setPlaceholderText] = useState("Enter property address...");
   const [lat, setLat] = useState<number | null>(40.34335913656855);
   const [lng, setLng] = useState<number | null>(-74.65503353339038);
-  const [zipCode, setZipCode] = useState('08544');
+  const [zipCode, setZipCode] = useState('08540');
   const [stateCode, setStateCode] = useState('NJ');
-  const [lotSize, setLotSize] = useState(50000);
+  const [lotSize, setLotSize] = useState(Number(defaultLotSize));
   const [viewportBounds, setViewportBounds] = useState<{north: number, south: number, east: number, west: number} | null>(null);
 
-  const [homeSizeSqft, setHomeSizeSqft] = useState(defaultHomeSizeSqft ?? 20000);
-  const [heatingFuel, setHeatingFuel] = useState(defaultHeatingFuel ?? 'gas');
-  const [annualEnergyCost, setAnnualEnergyCost] = useState(defaultAnnualEnergyCost ?? 18000);
+  const [homeSizeSqft, setHomeSizeSqft] = useState(Number(defaultHomeSizeSqft));
+  const [heatingFuel, setHeatingFuel] = useState(defaultHeatingFuel);
+  const [annualEnergyCost, setAnnualEnergyCost] = useState(Number(defaultEnergyCost));
 
   const [isFocused, setIsFocused] = useState(false);
   const typewriterHasRun = useRef(false);
   const typewriterTimeouts = useRef<NodeJS.Timeout[]>([]);
-  const hpTypewriterHasRun = useRef(false);
-  const hpTypewriterTimeouts = useRef<NodeJS.Timeout[]>([]);
   const userHasTyped = useRef(false);
 
   useEffect(() => {
-    if (typewriterHasRun.current || defaultAddress || disableTypewriter || enableHomepageTypewriter) return;
+    if (disableTypewriter) {
+      if (defaultAddress) setAddress(defaultAddress);
+      return;
+    }
     typewriterHasRun.current = true;
+    
+    setAddress('');
 
-    const targetAddress = "Poe Field, Princeton University, Princeton, NJ 08544";
+    const targetAddress = defaultAddress || "Poe Field, Princeton University, Princeton, NJ 08544";
     
     const initialDelay = setTimeout(() => {
       targetAddress.split('').forEach((char, index) => {
@@ -65,12 +68,12 @@ export default function AddressInput({
 
       const lockInDelay = setTimeout(() => {
         if (!userHasTyped.current) {
-          setAddress("Poe Field, Princeton University, Princeton, NJ 08544");
+          setAddress(targetAddress);
           setLat(40.34335913656855);
           setLng(-74.65503353339038);
-          setZipCode("08544");
+          setZipCode("08540");
           setStateCode("NJ");
-          setLotSize(50000);
+          setLotSize(Number(defaultLotSize));
         }
       }, targetAddress.length * 55 + 500);
       typewriterTimeouts.current.push(lockInDelay);
@@ -81,82 +84,17 @@ export default function AddressInput({
     return () => {
       typewriterTimeouts.current.forEach(clearTimeout);
     };
-  }, [defaultAddress, disableTypewriter, enableHomepageTypewriter]);
-
-  useEffect(() => {
-    if (!enableHomepageTypewriter || hpTypewriterHasRun.current || userHasTyped.current) return;
-    hpTypewriterHasRun.current = true;
-
-    const str1 = "Poe Field, Princeton University, Princeton, NJ 08544";
-    const str2 = "Enter your property address";
-    
-    const initialDelay = setTimeout(() => {
-      if (userHasTyped.current) return;
-      
-      let currentText = "";
-      
-      // Type str1
-      str1.split('').forEach((char, index) => {
-        const t = setTimeout(() => {
-          if (userHasTyped.current) return;
-          currentText += char;
-          setPlaceholderText(currentText);
-        }, index * 55);
-        hpTypewriterTimeouts.current.push(t);
-      });
-
-      const timeAfterStr1 = str1.length * 55;
-
-      // Pause 1500ms, then delete
-      const deleteStart = timeAfterStr1 + 1500;
-      str1.split('').forEach((_, index) => {
-        const t = setTimeout(() => {
-          if (userHasTyped.current) return;
-          currentText = currentText.slice(0, -1);
-          setPlaceholderText(currentText);
-        }, deleteStart + index * 30);
-        hpTypewriterTimeouts.current.push(t);
-      });
-
-      const timeAfterDelete = deleteStart + str1.length * 30;
-
-      // Pause 500ms, then type str2
-      const str2Start = timeAfterDelete + 500;
-      str2.split('').forEach((char, index) => {
-        const t = setTimeout(() => {
-          if (userHasTyped.current) return;
-          currentText += char;
-          setPlaceholderText(currentText);
-        }, str2Start + index * 55);
-        hpTypewriterTimeouts.current.push(t);
-      });
-
-    }, 1000);
-    
-    hpTypewriterTimeouts.current.push(initialDelay);
-
-    return () => {
-      hpTypewriterTimeouts.current.forEach(clearTimeout);
-    };
-  }, [enableHomepageTypewriter]);
+  }, [defaultAddress, disableTypewriter, defaultLotSize]);
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     userHasTyped.current = true;
     typewriterTimeouts.current.forEach(clearTimeout);
-    hpTypewriterTimeouts.current.forEach(clearTimeout);
-    if (enableHomepageTypewriter) {
-      setPlaceholderText("Enter your property address");
-    }
     setAddress(e.target.value);
   };
 
   const handleFocus = () => {
     userHasTyped.current = true;
     typewriterTimeouts.current.forEach(clearTimeout);
-    hpTypewriterTimeouts.current.forEach(clearTimeout);
-    if (enableHomepageTypewriter) {
-      setPlaceholderText("Enter your property address");
-    }
     setIsFocused(true);
   };
 
@@ -319,7 +257,7 @@ export default function AddressInput({
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+    <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
       <div className="relative mb-2">
         {isLoaded ? (
           <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged}>

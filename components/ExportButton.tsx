@@ -45,13 +45,16 @@ export default function ExportButton({ address, reportId }: ExportButtonProps) {
       htmlEl.style.overflow = 'visible';
       
       // Make all sections visible
-      document.querySelectorAll('[data-step]').forEach(el => {
+      const originalSectionDisplays: Record<number, string> = {};
+      document.querySelectorAll('[data-step]').forEach((el, index) => {
+        originalSectionDisplays[index] = (el as HTMLElement).style.display;
         (el as HTMLElement).style.minHeight = 'auto';
         (el as HTMLElement).style.overflow = 'visible';
+        (el as HTMLElement).style.setProperty('display', 'flex', 'important');
       });
 
       // Wait 300ms for DOM to settle
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 600));
 
       // Generate PDF
       const html2pdf = (await import('html2pdf.js')).default;
@@ -107,9 +110,10 @@ export default function ExportButton({ address, reportId }: ExportButtonProps) {
       htmlEl.style.overflow = '';
       
       // Restore section heights
-      document.querySelectorAll('[data-step]').forEach(el => {
+      document.querySelectorAll('[data-step]').forEach((el, index) => {
         (el as HTMLElement).style.minHeight = '100vh';
         (el as HTMLElement).style.overflow = 'hidden';
+        (el as HTMLElement).style.display = originalSectionDisplays[index] || '';
       });
 
       setIsLoading(false);
@@ -138,6 +142,7 @@ export default function ExportButton({ address, reportId }: ExportButtonProps) {
       document.querySelectorAll('[data-step]').forEach(el => {
         (el as HTMLElement).style.minHeight = '100vh';
         (el as HTMLElement).style.overflow = 'hidden';
+        (el as HTMLElement).style.display = ''; // Let react style take over
       });
 
       setTimeout(() => setError(false), 3000);

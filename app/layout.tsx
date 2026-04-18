@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "GeoSense — AI Geothermal Intelligence",
-  description: "Discover the geothermal potential beneath any property in seconds. AI-powered system recommendations, financial analysis, and carbon impact reporting.",
+  title: 'GeoSense',
+  description: 'Discover the geothermal potential beneath any property in seconds. AI-powered system recommendations, financial analysis, and carbon impact reporting.',
   openGraph: {
-    title: "GeoSense — AI Geothermal Intelligence",
-    description: "Discover the geothermal potential beneath any property in seconds. AI-powered system recommendations, financial analysis, and carbon impact reporting.",
-    type: "website",
+    title: 'GeoSense',
+    description: 'Discover the geothermal potential beneath any property in seconds. AI-powered system recommendations, financial analysis, and carbon impact reporting.',
+    type: 'website',
   }
 };
 

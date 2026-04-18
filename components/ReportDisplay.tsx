@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { GeoSenseReport } from '@/types/report';
@@ -63,7 +63,7 @@ const INSTALLER_DATABASE: Record<string, Installer[]> = {
   NJ: [
     {
       id: 1,
-      name: 'Princeton Geothermal Systems',
+      name: 'Mercer County Geothermal',
       location: 'Princeton, NJ',
       distance_miles: 2.1,
       phone: '(609) 924-4400',
@@ -186,7 +186,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
   const effectiveSystemRec = isPrinceton ? {
     type: 'horizontal_closed' as const,
     confidence: 'high' as const,
-    primary_reason: 'Poe Field\'s expansive open lawn provides ideal conditions for a horizontal closed-loop system. Triassic glacial till at 6ft burial depth offers excellent thermal contact, reducing installation costs by 35% compared to vertical drilling.',
+    primary_reason: 'Poe Field\'s expansive open lawn provides ideal conditions for a horizontal closed-loop system. Triassic Stockton Formation at 6ft burial depth offers excellent thermal contact, reducing installation costs by 35% compared to vertical drilling.',
     alternatives_ruled_out: [
       {
         type: 'vertical_closed',
@@ -194,22 +194,27 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
       },
       {
         type: 'open_loop',
-        reason: 'Groundwater at 60ft depth makes open-loop less suitable for this site.'
+        reason: 'Groundwater quality at this site makes open-loop less suitable.'
       }
     ],
     specs: {
       borehole_count: undefined,
       borehole_depth_ft: undefined,
-      trench_length_ft: 14800,
+      trench_length_ft: 5000,
       trench_depth_ft: 6,
       loop_material: 'HDPE',
       estimated_install_days: 30
     }
   } : report.system_recommendation;
 
-  const [activeStep, setActiveStep] = useState(1);
+  const [currentSection, setCurrentSection] = useState(0);
   const [showConfidence, setShowConfidence] = useState(false);
   const [showAlternatives, setShowAlternatives] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [quoteRequested, setQuoteRequested] = useState<string | null>(null);
 
   const installerStateCode = address.includes('NJ') ? 'NJ' :
@@ -236,42 +241,66 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
     low: 'bg-red-100 text-red-700'
   };
 
-  useEffect(() => {
-    document.documentElement.style.scrollSnapType = 'y mandatory';
-    document.documentElement.style.overflowY = 'scroll';
+  const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [canScrollDown, setCanScrollDown] = useState(false);
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            setActiveStep(parseInt(entry.target.getAttribute('data-step') || '1'));
-          }
-        });
-      },
-      { threshold: 0.5 }
-    );
+  const checkScroll = useCallback(() => {
+    const el = sectionRefs.current[currentSection];
+    if (el) {
+      const isAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
+      setCanScrollDown(!isAtBottom);
+    } else {
+      setCanScrollDown(false);
+    }
+  }, [currentSection]);
 
-    const sections = document.querySelectorAll('[data-step]');
-    sections.forEach(section => observer.observe(section));
+  const scrollToSection = useCallback((index: number) => {
+    setCurrentSection(index);
+    setTimeout(() => {
+      const el = sectionRefs.current[index];
+      if (el) {
+        el.scrollTop = 0;
+        checkScroll();
+      }
+    }, 0);
+  }, [checkScroll]);
 
-    return () => {
-      document.documentElement.style.scrollSnapType = '';
-      document.documentElement.style.overflowY = '';
-      sections.forEach(section => observer.unobserve(section));
-    };
-  }, []);
-
-  const scrollToSection = (step: number) => {
-    const el = document.querySelector(`[data-step="${step}"]`);
-    el?.scrollIntoView({ behavior: 'smooth' });
+  const handleBackToTop = () => {
+    setCurrentSection(0);
+    const el = sectionRefs.current[0];
+    if (el) el.scrollTop = 0;
   };
 
-  console.log('[ReportDisplay] Passing to LotDiagram:', {
-    systemType: effectiveSystemRec.type,
-    lat,
-    lng,
-    boreholeCount: effectiveSystemRec.specs.borehole_count
-  });
+  useEffect(() => {
+    checkScroll();
+    const el = sectionRefs.current[currentSection];
+    if (el) {
+      el.scrollTop = 0;
+      el.addEventListener('scroll', checkScroll);
+      return () => el.removeEventListener('scroll', checkScroll);
+    }
+  }, [currentSection, checkScroll]);
+
+  useEffect(() => {
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [checkScroll]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+        e.preventDefault();
+        setCurrentSection(prev => Math.min(prev + 1, 4));
+      }
+      if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault();
+        setCurrentSection(prev => Math.max(prev - 1, 0));
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const stateCode = address.includes('NJ') ? 'NJ' :
     address.includes('NY') ? 'NY' :
@@ -282,7 +311,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
     address.includes('TX') ? 'TX' : 'State';
 
   return (
-    <div className="relative bg-white font-sans text-gray-900 min-h-screen" suppressHydrationWarning={true}>
+    <div suppressHydrationWarning className="relative bg-white font-sans text-gray-900 min-h-screen">
       {/* Moving Grid Background */}
       <div 
         className="fixed inset-0 z-0 opacity-20 pointer-events-none"
@@ -313,31 +342,31 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
       </nav>
 
       {/* STEPPER */}
-      <div id="report-stepper" className="fixed top-[73px] left-0 right-0 z-40 bg-white border-b border-gray-100 py-4 px-8">
-        <div className="max-w-2xl mx-auto flex items-center justify-between relative">
+      <div id="report-stepper" className="fixed top-[73px] left-0 right-0 z-40 bg-white border-b border-gray-100 py-4 px-4 md:px-8">
+        <div className="max-w-2xl mx-auto flex items-center justify-center md:justify-between relative">
           {/* Connecting lines */}
-          <div className="absolute top-4 left-4 right-4 h-px flex z-0">
-            <div className={`h-full transition-all duration-500 bg-green-300`} style={{ width: `${((activeStep - 1) / 4) * 100}%` }} />
-            <div className={`h-full transition-all duration-500 bg-gray-200`} style={{ width: `${(1 - (activeStep - 1) / 4) * 100}%` }} />
+          <div className="hidden md:flex absolute top-4 left-4 right-4 h-px z-0">
+            <div className={`h-full transition-all duration-500 bg-green-300`} style={{ width: `${(currentSection / 4) * 100}%` }} />
+            <div className={`h-full transition-all duration-500 bg-gray-200`} style={{ width: `${(1 - currentSection / 4) * 100}%` }} />
           </div>
 
           {[
-            { step: 1, label: 'Summary' },
-            { step: 2, label: 'System' },
-            { step: 3, label: 'Financials' },
-            { step: 4, label: 'Climate' },
-            { step: 5, label: 'Installers' }
+            { index: 0, step: 1, label: 'Summary' },
+            { index: 1, step: 2, label: 'System' },
+            { index: 2, step: 3, label: 'Financials' },
+            { index: 3, step: 4, label: 'Climate' },
+            { index: 4, step: 5, label: 'Installers' }
           ].map((s) => {
-            const isCompleted = activeStep > s.step;
-            const isActive = activeStep === s.step;
+            const isCompleted = currentSection > s.index;
+            const isActive = currentSection === s.index;
 
             return (
               <button 
-                key={s.step} 
-                onClick={() => scrollToSection(s.step)}
-                className="flex flex-col items-center relative z-10 cursor-pointer group"
+                key={s.index} 
+                onClick={() => scrollToSection(s.index)}
+                className={`flex-col items-center gap-1 cursor-pointer group active:scale-95 transition-transform duration-100 relative z-10 ${isActive ? 'flex' : 'hidden md:flex'}`}
               >
-                <div className={`rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-300 ${
+                <div className={`rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ease-out ${
                   isActive ? 'w-8 h-8 bg-green-700 text-white' : 
                   isCompleted ? 'w-9 h-9 bg-green-100 text-green-700 ring-2 ring-green-300 ring-offset-2' : 
                   'w-8 h-8 bg-gray-100 text-gray-400 group-hover:border-gray-300 group-hover:bg-gray-50 transition-colors duration-150'
@@ -351,8 +380,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                   )}
                 </div>
                 <span className={`text-xs font-medium mt-2 absolute top-8 whitespace-nowrap transition-colors duration-300 ${
-                  isActive ? 'text-green-700' : 
-                  isCompleted ? 'text-green-700' : 
+                  isActive || isCompleted ? 'text-green-700' : 
                   'text-gray-400 group-hover:text-gray-600'
                 }`}>
                   {s.label}
@@ -374,55 +402,56 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
         </div>
 
         {/* SECTION 1 - Summary */}
-        <div data-step="1" className="relative flex flex-col items-center justify-center px-8" style={{ scrollSnapAlign: 'start', minHeight: '100vh', overflow: 'hidden' }}>
-          <div className="w-full max-w-5xl mx-auto px-8 pt-40 pb-24">
-            
-            {/* Report header */}
-            <div className="mb-10 space-y-1">
-              <p className="text-sm font-medium text-green-700 uppercase tracking-widest">
-                Geothermal Analysis Report
-              </p>
-              <h1 className="text-3xl font-semibold text-gray-900">
-                {address}
-              </h1>
-              <p className="text-sm text-gray-400">
-                Geothermal Analysis Report
-              </p>
-            </div>
-
-            {/* Four metric cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 max-w-5xl">
+        <div data-step="0" ref={(el) => { sectionRefs.current[0] = el; }} onScroll={checkScroll} className={`transition-opacity duration-500 ease-in-out flex flex-col items-center px-4 md:px-8 ${mounted && currentSection !== 0 ? 'opacity-0 pointer-events-none absolute inset-0' : 'opacity-100 relative'}`} style={{ height: '100vh', overflowY: 'auto', overflowX: 'hidden' }}>
+          <div className="flex flex-col w-full max-w-5xl mx-auto min-h-full">
+            <div className="flex-1 w-full px-4 md:px-8 pt-32 pb-16 md:pb-32 flex flex-col justify-center">
               
-              {/* Card 1 */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-8 border-l-[6px] border-l-green-600 shadow-sm min-h-52 no-break">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-600 mb-3">
-                  <rect x="4" y="4" width="16" height="16" rx="2"/>
-                  <rect x="9" y="9" width="6" height="6"/>
-                  <path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/>
-                </svg>
-                <p className="text-sm text-gray-500 font-medium uppercase tracking-wide mb-3">
-                  RECOMMENDED SYSTEM
+              {/* Report header */}
+              <div className="mb-6 space-y-1">
+                <p className="text-sm font-medium text-green-700 uppercase tracking-widest">
+                  Geothermal Analysis Report
                 </p>
-                <p className="text-2xl font-bold text-gray-900 leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
-                  {formatSystemType(effectiveSystemRec.type)}
+                <h1 className="text-2xl font-semibold text-gray-900 mb-4">
+                  {address}
+                </h1>
+                <p className="text-base text-gray-600 mt-4 max-w-3xl leading-relaxed">
+                  {(isPrinceton ? "Poe Field's expansive open lawn provides ideal conditions for a horizontal closed-loop system. Triassic Stockton Formation at 6ft burial depth offers excellent thermal contact, reducing installation costs by 35% compared to vertical drilling." : report.system_recommendation.primary_reason)}
                 </p>
-                <div className="mt-2">
-                  <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                    High Confidence
-                  </span>
-                </div>
               </div>
 
-              {/* Card 2 */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-8 border-l-[6px] border-l-green-600 shadow-sm min-h-52 no-break">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-600 mb-3">
-                  <line x1="12" y1="1" x2="12" y2="23"/>
-                  <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
-                </svg>
-                <p className="text-sm text-gray-500 font-medium uppercase tracking-wide mb-3">
+              {/* Four metric cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 max-w-5xl">
+                
+                {/* Card 1 */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-5 border-l-[6px] border-l-green-600 shadow-sm min-h-40 no-break">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-600 mb-3">
+                    <rect x="4" y="4" width="16" height="16" rx="2"/>
+                    <rect x="9" y="9" width="6" height="6"/>
+                    <path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/>
+                  </svg>
+                  <p className="text-sm text-gray-500 font-medium uppercase tracking-wide mb-3">
+                    RECOMMENDED SYSTEM
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
+                    {formatSystemType(effectiveSystemRec.type)}
+                  </p>
+                  <div className="mt-2">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                      High Confidence
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card 2 */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-5 border-l-[6px] border-l-green-600 shadow-sm min-h-40 no-break">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-600 mb-3">
+                    <line x1="12" y1="1" x2="12" y2="23"/>
+                    <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+                  </svg>
+                  <p className="text-sm text-gray-500 font-medium uppercase tracking-wide mb-3">
                   NET COST
                 </p>
-                <p className="text-3xl font-bold text-gray-900 leading-tight">
+                <p className="text-2xl font-bold text-gray-900 leading-tight">
                   {formatCurrency(report.financials.net_cost_usd)}
                 </p>
                 <p className="text-sm text-gray-400 mt-1">
@@ -431,7 +460,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
               </div>
 
               {/* Card 3 */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-8 border-l-[6px] border-l-green-600 shadow-sm min-h-52 no-break">
+              <div className="bg-white border border-gray-200 rounded-2xl p-5 border-l-[6px] border-l-green-600 shadow-sm min-h-40 no-break">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-600 mb-3">
                   <circle cx="12" cy="12" r="10"/>
                   <polyline points="12 6 12 12 16 14"/>
@@ -439,16 +468,16 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                 <p className="text-sm text-gray-500 font-medium uppercase tracking-wide mb-3">
                   PAYBACK PERIOD
                 </p>
-                <p className="text-3xl font-bold text-gray-900 leading-tight">
+                <p className="text-2xl font-bold text-gray-900 leading-tight">
                   {report.financials.payback_years} yrs
                 </p>
                 <p className="text-sm text-gray-400 mt-1">
-                  estimated return on investment
+                  to break even on installation cost
                 </p>
               </div>
 
               {/* Card 4 */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-8 border-l-[6px] border-l-green-600 shadow-sm min-h-52 no-break">
+              <div className="bg-white border border-gray-200 rounded-2xl p-5 border-l-[6px] border-l-green-600 shadow-sm min-h-40 no-break">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-600 mb-3">
                   <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
                   <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
@@ -456,7 +485,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                 <p className="text-sm text-gray-500 font-medium uppercase tracking-wide mb-3">
                   ANNUAL CO₂ OFFSET
                 </p>
-                <p className="text-3xl font-bold text-gray-900 leading-tight">
+                <p className="text-2xl font-bold text-gray-900 leading-tight">
                   {report.carbon.annual_co2_offset_tons} tons
                 </p>
                 <p className="text-sm text-gray-400 mt-1">
@@ -466,29 +495,22 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
 
             </div>
           </div>
-
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 cursor-pointer" onClick={() => scrollToSection(2)}>
-            <span className="text-xs text-gray-400">scroll to continue</span>
-            <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center" style={{ animation: 'bob 2s ease-in-out infinite' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 9l6 6 6-6"/>
-              </svg>
-            </div>
-          </div>
+        </div>
         </div>
 
         {/* SECTION 2 - System */}
-        <div data-step="2" className="relative flex items-center min-h-screen pt-40 pb-16 px-8 bg-gray-50/60" style={{ scrollSnapAlign: 'start', overflow: 'hidden' }}>
-          <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row gap-12">
+        <div data-step="1" ref={(el) => { sectionRefs.current[1] = el; }} onScroll={checkScroll} className={`transition-opacity duration-500 ease-in-out flex flex-col items-center justify-center min-h-screen pt-20 px-8 bg-gray-50/60 scrollbar-hide ${mounted && currentSection !== 1 ? 'opacity-0 pointer-events-none absolute inset-0' : 'opacity-100 relative'}`} style={{ height: '100vh', overflowY: 'auto', overflowX: 'hidden' }}>
+          <div className="flex flex-col w-full max-w-7xl mx-auto min-h-full">
+            <div className="flex flex-col md:flex-row gap-12 flex-1 pt-32 pb-16">
             
             {/* Left Column */}
-            <div className="w-full md:w-[55%] md:overflow-y-auto md:max-h-[calc(100vh-10rem)] pr-4 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-              <p className="text-xs font-semibold text-green-700 uppercase tracking-widest mb-5">
+            <div className="w-full md:w-[55%] pr-4">
+              <p className="text-xs font-semibold text-green-700 uppercase tracking-widest mb-3">
                 Recommended System
               </p>
 
-              <div className="flex items-center gap-4 mb-6 mt-2">
-                <h2 className="text-4xl font-bold text-gray-900">
+              <div className="flex items-center gap-4 mb-4 mt-2">
+                <h2 className="text-3xl font-bold text-gray-900">
                   {formatSystemType(effectiveSystemRec.type)}
                 </h2>
                 
@@ -525,19 +547,13 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                 </div>
               </div>
 
-              <p className="text-lg text-gray-700 leading-relaxed mb-8 max-w-lg border-l-4 border-green-600 pl-4 py-1"
-                style={{
-                  display: '-webkit-box',
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden'
-                }}>
+              <p className="text-sm text-gray-700 leading-relaxed mb-4 max-w-lg border-l-4 border-green-600 pl-4 py-1">
                 {effectiveSystemRec.primary_reason}
               </p>
 
               {effectiveSystemRec.type === 'horizontal_closed' ? (
-                <div className="grid grid-cols-2 gap-4 mb-8 max-w-lg">
-                  <div className="bg-white rounded-2xl p-6 border border-gray-200 min-h-[100px]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4 max-w-lg">
+                  <div className="bg-white rounded-2xl p-4 border border-gray-200 min-h-[100px]">
                     <div className="flex items-center gap-2 mb-3">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-600">
                         <line x1="12" y1="2" x2="12" y2="22"/>
@@ -548,12 +564,12 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                         Trench Length
                       </span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-xl font-bold text-gray-900">
                       {effectiveSystemRec.specs.trench_length_ft?.toLocaleString() ?? 'N/A'} ft total
                     </p>
                   </div>
 
-                  <div className="bg-white rounded-2xl p-6 border border-gray-200 min-h-[100px]">
+                  <div className="bg-white rounded-2xl p-4 border border-gray-200 min-h-[100px]">
                     <div className="flex items-center gap-2 mb-3">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-600">
                         <line x1="12" y1="5" x2="12" y2="19"/>
@@ -563,7 +579,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                         Burial Depth
                       </span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-xl font-bold text-gray-900">
                       {effectiveSystemRec.specs.trench_depth_ft ?? 6} ft deep
                     </p>
                   </div>
@@ -600,7 +616,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4 mb-8 max-w-lg">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 max-w-lg">
                   <div className="bg-white rounded-2xl p-6 border border-gray-200 min-h-[100px]">
                     <div className="flex items-center gap-2 mb-3">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-600">
@@ -671,7 +687,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                 </p>
                 <div className="bg-white rounded-xl p-4 border border-gray-200">
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    {report.subsurface_summary}
+                    {(isPrinceton ? "Stockton Formation geology with thermal conductivity of 2.4 W/m·K — high geothermal potential. Bedrock at 15ft, groundwater at 20ft. Excavation difficulty: moderate. Ideal conditions for horizontal closed-loop installation." : report.subsurface_summary)}
                   </p>
                 </div>
               </div>
@@ -707,9 +723,9 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
             </div>
 
             {/* Right Column */}
-            <div className="w-full md:w-[45%] md:sticky md:top-32 md:self-start md:max-h-[calc(100vh-10rem)]">
-              {activeStep >= 2 ? (
-                <div id="lot-diagram-section" className="w-full h-[300px] md:h-full md:min-h-[500px] rounded-2xl overflow-hidden border border-gray-200 sticky top-32">
+            <div className="w-full md:w-[45%] flex items-center justify-center md:sticky md:top-32 md:self-start pb-16 md:pb-16 mt-8 md:mt-0">
+              {currentSection >= 1 ? (
+                <div id="lot-diagram-section" className="w-full h-[300px] md:min-h-[500px] rounded-2xl overflow-hidden border border-gray-200 relative md:sticky md:top-32">
                   <LotDiagram
                     lat={lat}
                     lng={lng}
@@ -722,7 +738,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                   />
                 </div>
               ) : (
-                <div id="lot-diagram-section" className="w-full h-[300px] md:min-h-[500px] rounded-2xl bg-gray-100 animate-pulse border border-gray-200 sticky top-32"/>
+                <div id="lot-diagram-section" className="w-full h-[300px] md:min-h-[500px] rounded-2xl bg-gray-100 animate-pulse border border-gray-200 relative md:sticky md:top-32"/>
               )}
               <div 
                 id="pdf-map-placeholder"
@@ -735,29 +751,22 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
               </div>
             </div>
 
-          </div>
-
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 cursor-pointer" onClick={() => scrollToSection(3)}>
-            <span className="text-xs text-gray-400">scroll to continue</span>
-            <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center" style={{ animation: 'bob 2s ease-in-out infinite' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 9l6 6 6-6"/>
-              </svg>
             </div>
           </div>
         </div>
 
         {/* SECTION 3 - Financials */}
-        <div data-step="3" className="relative flex items-center min-h-screen pt-32 pb-16 px-8 bg-white" style={{ scrollSnapAlign: 'start', overflow: 'hidden' }}>
-          <div className="w-full max-w-4xl mx-auto">
-            <div className="mb-10">
+        <div data-step="2" ref={(el) => { sectionRefs.current[2] = el; }} onScroll={checkScroll} className={`transition-opacity duration-500 ease-in-out flex flex-col items-center justify-center min-h-screen pt-20 px-4 md:px-8 bg-white scrollbar-hide ${mounted && currentSection !== 2 ? 'opacity-0 pointer-events-none absolute inset-0' : 'opacity-100 relative'}`} style={{ height: '100vh', overflowY: 'auto', overflowX: 'hidden' }}>
+          <div className="flex flex-col w-full max-w-4xl mx-auto min-h-full">
+            <div className="flex-1 w-full pt-32 pb-16">
+            <div className="mb-6">
               <p className="text-xs font-semibold text-green-700 uppercase tracking-widest mb-3">
                 Financial Breakdown
               </p>
-              <h2 className="text-4xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
                 Your investment, calculated.
               </h2>
-              <p className="text-lg text-gray-500">
+              <p className="text-base md:text-lg text-gray-500">
                 Federal and state incentives significantly reduce your upfront cost.
               </p>
             </div>
@@ -765,7 +774,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
             <div className="flex flex-col md:flex-row gap-8">
               {/* Left Column - Receipt */}
               <div className="w-full md:w-[60%]">
-                <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm no-break">
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm no-break">
                   <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
                     <div>
                       <p className="text-sm font-semibold text-gray-900">
@@ -785,57 +794,57 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                     </div>
                   </div>
 
-                  <div className="flex items-baseline justify-between py-3">
-                    <span className="text-base text-gray-700">
+                  <div className="flex items-center sm:items-baseline justify-between py-3">
+                    <span className="text-sm sm:text-base text-gray-700">
                       Gross installation cost
                     </span>
-                    <span className="text-xl font-bold text-gray-900">
+                    <span className="text-base sm:text-lg font-bold text-gray-900">
                       {formatCurrency(report.financials.gross_cost_usd)}
                     </span>
                   </div>
 
                   <div className="border-t border-dashed border-gray-200 my-1"/>
 
-                  <div className="flex items-baseline justify-between py-3">
-                    <div>
-                      <span className="text-base text-gray-700">
+                  <div className="flex items-start sm:items-baseline justify-between py-3">
+                    <div className="pr-2">
+                      <span className="text-sm sm:text-base text-gray-700 block sm:inline">
                         Federal IRA Tax Credit
                       </span>
-                      <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                      <span className="mt-1 sm:mt-0 sm:ml-2 inline-block text-[10px] sm:text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
                         30% · Available through 2032
                       </span>
                     </div>
-                    <span className="text-xl font-bold text-green-600">
+                    <span className="text-base sm:text-lg font-bold text-green-600 flex-shrink-0 mt-0 sm:mt-0">
                       -{formatCurrency(report.financials.federal_tax_credit_usd)}
                     </span>
                   </div>
 
-                  <div className="flex items-baseline justify-between py-3">
-                    <div>
-                      <span className="text-base text-gray-700">
+                  <div className="flex items-start sm:items-baseline justify-between py-3">
+                    <div className="pr-2">
+                      <span className="text-sm sm:text-base text-gray-700 block sm:inline">
                         State Rebate
                       </span>
-                      <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                      <span className="mt-1 sm:mt-0 sm:ml-2 inline-block text-[10px] sm:text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
                         {stateCode}
                       </span>
                     </div>
-                    <span className="text-xl font-bold text-green-600">
+                    <span className="text-base sm:text-lg font-bold text-green-600 flex-shrink-0 mt-0 sm:mt-0">
                       -{formatCurrency(report.financials.state_rebate_usd)}
                     </span>
                   </div>
 
                   <div className="border-t-2 border-gray-900 my-2"/>
 
-                  <div className="flex items-baseline justify-between py-3">
+                  <div className="flex items-end sm:items-baseline justify-between py-3">
                     <div>
-                      <span className="text-lg font-bold text-gray-900">
+                      <span className="text-base sm:text-lg font-bold text-gray-900">
                         Your net cost
                       </span>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
                         after all federal and state incentives
                       </p>
                     </div>
-                    <span className="text-3xl font-bold text-gray-900">
+                    <span className="text-xl sm:text-2xl font-bold text-gray-900">
                       {formatCurrency(report.financials.net_cost_usd)}
                     </span>
                   </div>
@@ -861,7 +870,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
 
               {/* Right Column - Metrics */}
               <div className="w-full md:w-[40%] space-y-4">
-                <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 no-break">
+                <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 no-break">
                   <div className="flex items-center gap-2 mb-3">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-600">
                       <circle cx="12" cy="12" r="10"/>
@@ -876,11 +885,11 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                     <span className="text-xl font-medium text-gray-500 ml-1">yrs</span>
                   </p>
                   <p className="text-sm text-gray-500 mt-2">
-                    Estimated return on investment
+                    to break even on installation cost
                   </p>
                 </div>
 
-                <div className="bg-green-700 rounded-2xl p-6 no-break">
+                <div className="bg-green-700 rounded-2xl p-5 no-break">
                   <div className="flex items-center gap-2 mb-3">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-300">
                       <line x1="12" y1="1" x2="12" y2="23"/>
@@ -899,7 +908,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                   </p>
                 </div>
 
-                <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 no-break">
+                <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 no-break">
                   <div className="flex items-center gap-2 mb-3">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-600">
                       <line x1="19" y1="5" x2="5" y2="19"/>
@@ -919,55 +928,43 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 cursor-pointer" onClick={() => scrollToSection(4)}>
-            <span className="text-xs text-gray-400">scroll to continue</span>
-            <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center" style={{ animation: 'bob 2s ease-in-out infinite' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 9l6 6 6-6"/>
-              </svg>
+            {/* End of flex-1 w-full pt-36 pb-16 */}
             </div>
           </div>
         </div>
 
         {/* SECTION 4 - Climate */}
-        <div data-step="4" className="relative flex items-center min-h-screen pt-32 pb-16 px-8 bg-white" style={{ scrollSnapAlign: 'start', overflow: 'hidden' }}>
-          <div className="w-full max-w-4xl mx-auto">
-            {activeStep >= 3 ? (
+        <div data-step="3" ref={(el) => { sectionRefs.current[3] = el; }} onScroll={checkScroll} className={`transition-opacity duration-500 ease-in-out flex flex-col items-center px-4 md:px-8 bg-white scrollbar-hide ${mounted && currentSection !== 3 ? 'opacity-0 pointer-events-none absolute inset-0' : 'opacity-100 relative'}`} style={{ height: '100vh', overflowY: 'auto', overflowX: 'hidden' }}>
+          <div className="flex flex-col w-full max-w-4xl mx-auto min-h-full">
+            <div className="flex-1 w-full pt-32 pb-16 flex flex-col justify-center">
+            {currentSection >= 2 ? (
               <ClimateSection report={report} />
             ) : (
               <div className="w-full h-96 bg-gray-50 animate-pulse rounded-2xl border border-gray-200"></div>
             )}
-
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 cursor-pointer" onClick={() => scrollToSection(5)}>
-              <span className="text-xs text-gray-400">scroll to continue</span>
-              <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center" style={{ animation: 'bob 2s ease-in-out infinite' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 9l6 6 6-6"/>
-                </svg>
-              </div>
             </div>
           </div>
         </div>
 
         {/* SECTION 5 - Installers */}
-        <div data-step="5" className="relative flex flex-col items-center min-h-screen pt-32 pb-16 px-8 bg-white" style={{ scrollSnapAlign: 'start', overflow: 'hidden' }}>
-          <div className="w-full max-w-5xl mx-auto">
+        <div data-step="4" ref={(el) => { sectionRefs.current[4] = el; }} onScroll={checkScroll} className={`transition-opacity duration-500 ease-in-out flex flex-col items-center justify-center min-h-screen pt-20 px-4 md:px-8 bg-white scrollbar-hide ${mounted && currentSection !== 4 ? 'opacity-0 pointer-events-none absolute inset-0' : 'opacity-100 relative'}`} style={{ height: '100vh', overflowY: 'auto', overflowX: 'hidden' }}>
+          <div className="flex flex-col w-full max-w-5xl mx-auto min-h-full">
+            <div className="flex-1 w-full px-4 md:px-8 pt-32 pb-32">
             <div className="mb-8">
               <p className="text-xs font-semibold text-green-700 uppercase tracking-widest mb-3">
                 Local Installers
               </p>
-              <h2 className="text-4xl font-bold text-gray-900 mb-2">
-                Find certified installers near you.
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                Certified installers near Princeton, NJ.
               </h2>
-              <p className="text-lg text-gray-500">
+              <p className="text-base md:text-lg text-gray-500">
                 IGSHPA-certified contractors who specialize in {formatSystemType(effectiveSystemRec.type)} systems near {address.split(',')[1]?.trim() || 'your area'}.
               </p>
+              <p className="text-xs text-gray-400 mt-1">Installer listings are illustrative. Verify current IGSHPA certification status before contacting.</p>
             </div>
 
             {installers.filter(i => i.featured).map(installer => (
-              <div key={installer.id} className="mb-6 bg-white border-2 border-green-600 rounded-2xl p-6 relative">
+              <div key={installer.id} className="mb-6 bg-white border-2 border-green-600 rounded-2xl p-5 relative">
                 <div className="absolute top-4 right-4">
                   <span className="bg-green-700 text-white text-xs font-semibold px-3 py-1 rounded-full">
                     Top Match
@@ -1011,16 +1008,16 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                   {installer.description}
                 </p>
                 
-                <div className="grid grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 rounded-xl">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 rounded-xl">
                   <div className="text-center">
-                    <p className="text-xl font-bold text-gray-900">
+                    <p className="text-lg font-bold text-gray-900">
                       {installer.years_experience}+
                     </p>
                     <p className="text-xs text-gray-500">
                       years experience
                     </p>
                   </div>
-                  <div className="text-center border-x border-gray-200">
+                  <div className="text-center md:border-x border-gray-200 py-2 md:py-0">
                     <p className="text-xl font-bold text-gray-900">
                       {installer.projects_completed}+
                     </p>
@@ -1055,11 +1052,13 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                     className="flex-1 bg-green-700 text-white font-medium py-3 px-6 rounded-xl hover:bg-green-600 transition-colors text-sm">
                     Request Free Quote
                   </button>
-                  <button 
-                    onClick={() => window.open(installer.website, '_blank')}
-                    className="border border-gray-200 text-gray-700 font-medium py-3 px-6 rounded-xl hover:bg-gray-50 transition-colors text-sm">
+                  <a 
+                    href="https://www.igshpa.org/find-a-contractor"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="border border-gray-200 text-gray-700 font-medium py-3 px-6 rounded-xl hover:bg-gray-50 transition-colors text-sm flex items-center justify-center">
                     Visit Website
-                  </button>
+                  </a>
                   <a href={`tel:${installer.phone}`}
                     className="border border-gray-200 text-gray-700 font-medium py-3 px-6 rounded-xl hover:bg-gray-50 transition-colors text-sm flex items-center justify-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1071,7 +1070,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
               </div>
             ))}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {installers.filter(i => !i.featured).map(installer => (
                 <div key={installer.id} className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-green-200 hover:shadow-sm transition-all">
                   <div className="flex items-start justify-between mb-3">
@@ -1121,11 +1120,13 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                       className="flex-1 bg-green-700 text-white text-xs font-medium py-2 px-3 rounded-lg hover:bg-green-600 transition-colors">
                       Get Quote
                     </button>
-                    <button
-                      onClick={() => window.open(installer.website, '_blank')}
-                      className="border border-gray-200 text-gray-600 text-xs font-medium py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <a
+                      href="https://www.igshpa.org/find-a-contractor"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="border border-gray-200 text-gray-600 text-xs font-medium py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center">
                       Website
-                    </button>
+                    </a>
                   </div>
                 </div>
               ))}
@@ -1152,7 +1153,7 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
                 End of Report
               </p>
               <button
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                onClick={handleBackToTop}
                 className="mt-3 text-xs text-gray-500 hover:text-gray-300 transition-colors underline underline-offset-2">
                 Back to top
               </button>
@@ -1177,6 +1178,25 @@ export default function ReportDisplay({ report, address, lat, lng, reportId, raw
           </div>
         </div>
       )}
+
+      {/* Global Indicator for Unread Overflow */}
+      {canScrollDown && (
+        <div 
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-1.5 cursor-pointer group animate-fade-in" 
+          onClick={() => {
+            const el = sectionRefs.current[currentSection];
+            if (el) el.scrollBy({ top: 200, behavior: 'smooth' });
+          }}
+        >
+          <span className="text-[10px] font-bold tracking-widest uppercase text-gray-500 group-hover:text-gray-800 transition-colors duration-200 drop-shadow-sm bg-white/80 px-2 py-0.5 rounded-full">scroll for more</span>
+          <div className="w-8 h-8 bg-white/95 backdrop-blur-sm shadow-md border border-gray-200 rounded-full flex items-center justify-center group-hover:scale-110 group-hover:border-gray-300 transition-all duration-200" style={{ animation: 'bob 2s ease-in-out infinite' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600 mt-0.5">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+        </div>
+      )}
     </div>
+  </div>
   );
 }

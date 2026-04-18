@@ -4,20 +4,9 @@ import { serverSupabase } from '@/lib/supabase/server';
 import { GeoSenseReport } from '@/types/report';
 import ReportDisplay from '@/components/ReportDisplay';
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
-  
-  try {
-    const supabase = serverSupabase;
-    const { data } = await supabase.from('reports').select('address').eq('id', id).single();
-    return {
-      title: data ? `GeoSense Report — ${data.address}` : 'Report Not Found',
-    };
-  } catch (error) {
-    console.error('[GeoSense] Metadata fetch failed:', error);
-    return { title: 'GeoSense Report' };
-  }
-}
+export const metadata: Metadata = {
+  title: 'GeoSense',
+};
 
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

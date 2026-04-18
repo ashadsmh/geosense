@@ -97,18 +97,19 @@ function AnalyzeContent() {
       geoData?.address?.includes('Poe Field') ||
       geoData?.address?.includes('Princeton University')
     
-    if (!geoData) {
+      if (!geoData) {
       // Fallback to Princeton hardcoded values 
       // if no data available
       const fallbacks = [
         '40.3434° N, 74.6550° W',
-        'Triassic shale — Poe Field, Princeton',
-        'Climate zone 4A — HDD 4,800',
-        '2.1 W/m·K — ideal for horizontal loops',
-        'Horizontal loop recommended — 94% score',
-        'Report ready'
+        'Triassic Shale — Poe Field, Princeton',
+        'Climate Zone 4A — HDD 4,800',
+        '2.1 W/m·K — Ideal For Horizontal Loops',
+        'Horizontal Loop Recommended — 94% Score',
+        'Report Ready'
       ]
-      return fallbacks[stepIndex] || ''
+      const fallbackStr = fallbacks[stepIndex] || ''
+      return fallbackStr.replace(/(^\w|\s\w)/g, l => l.toUpperCase())
     }
     
     const { soil, climate, lat, lng } = geoData
@@ -116,11 +117,18 @@ function AnalyzeContent() {
     // Format soil class for display
     const soilDisplay = soil.soil_class
       .replace(/_/g, ' ')
-      .replace(/\b\w/g, l => l.toUpperCase())
+      .replace(/(^\w|\s\w)/g, l => l.toUpperCase())
     
     // Format drilling difficulty
     const drillingDisplay = soil.drilling_difficulty
       .replace(/_/g, ' ')
+      .replace(/(^\w|\s\w)/g, l => l.toUpperCase())
+    
+    // Format area
+    const countyDisplay = soil.county
+      .replace(/_/g, ' ')
+      .replace(/(^\w|\s\w)/g, l => l.toUpperCase())
+    const stateDisplay = typeof soil.state === 'string' ? soil.state.toUpperCase() : soil.state
     
     const callouts = [
       // Step 1: Geocoding
@@ -130,30 +138,31 @@ function AnalyzeContent() {
       
       // Step 2: USGS soil
       (isPrinceton && stepIndex === 1)
-        ? 'Triassic shale — Poe Field, Princeton'
-        : `${soilDisplay} — ${soil.county}, ${soil.state}`,
+        ? 'Triassic Shale — Poe Field, Princeton'
+        : `${soilDisplay} — ${countyDisplay}, ${stateDisplay}`,
       
       // Step 3: NOAA climate
-      `Climate zone ${climate.climate_zone} — ` +
+      `Climate Zone ${climate.climate_zone} — ` +
       `HDD ${climate.heating_degree_days
         .toLocaleString()}`,
       
       // Step 4: Thermal conductivity
       (isPrinceton && stepIndex === 3)
-        ? '2.1 W/m·K — ideal for horizontal loops'
+        ? '2.1 W/m·K — Ideal For Horizontal Loops'
         : `${soil.thermal_conductivity_w_mk} W/m·K — ` +
-          `${drillingDisplay} drilling`,
+          `${drillingDisplay} Drilling`,
       
       // Step 5: Groq model
       (isPrinceton && stepIndex === 4)
-        ? 'Horizontal loop recommended — 94% score'
-        : '4 systems evaluated',
+        ? 'Horizontal Loop Recommended — 94% Score'
+        : '4 Systems Evaluated',
       
       // Step 6: Complete
-      'Report ready'
+      'Report Ready'
     ]
     
-    return callouts[stepIndex] || ''
+    const finalCallout = callouts[stepIndex] || ''
+    return finalCallout.replace(/(^\w|\s\w)/g, l => l.toUpperCase())
   }
 
   useEffect(() => {
@@ -227,7 +236,7 @@ function AnalyzeContent() {
   if (hasError) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 text-white p-4">
-        <div className="fixed top-0 left-0 right-0 z-50 px-8 py-5 flex items-center">
+        <div className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 py-5 flex items-center">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-green-700 rounded-lg flex items-center justify-center flex-shrink-0">
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -278,7 +287,7 @@ function AnalyzeContent() {
         <div className="w-96 h-96 bg-green-950/20 rounded-full blur-3xl"/>
       </div>
 
-      <div className="fixed top-0 left-0 right-0 z-50 px-8 py-5 flex items-center">
+      <div className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 py-5 flex items-center">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-green-700 rounded-lg flex items-center justify-center flex-shrink-0">
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">

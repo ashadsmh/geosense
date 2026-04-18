@@ -68,7 +68,7 @@ export default function LandingPage() {
       `}</style>
 
       {/* SECTION 1 — Hero */}
-      <section className="section flex items-center justify-center px-6 md:px-12 lg:px-24">
+      <section className="section flex items-center justify-center px-4 md:px-12 lg:px-24">
         <div className="max-w-7xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           {/* Left Column */}
           <div className="flex flex-col items-start pt-12">
@@ -82,11 +82,11 @@ export default function LandingPage() {
               </div>
               <span className="text-2xl font-bold text-green-700 tracking-tight">GeoSense</span>
             </div>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-gray-900 leading-none mb-6">
+            <h1 className="text-3xl md:text-6xl lg:text-7xl font-bold tracking-tight text-gray-900 leading-none mb-6">
               Discover your home's geothermal potential.
             </h1>
-            <p className="text-lg text-gray-500 max-w-lg mb-10 leading-relaxed">
-              GeoSense uses USGS geology and NOAA climate data, in tandem with AI, to generate a personalized geothermal energy report for any property in seconds.
+            <p className="text-base md:text-lg text-gray-500 max-w-lg mb-10 leading-relaxed">
+              GeoSense analyzes USGS geology and NOAA climate data to generate a personalized geothermal energy report for any US property — in seconds.
             </p>
           </div>
 
@@ -124,17 +124,17 @@ export default function LandingPage() {
       </section>
 
       {/* SECTION 2 — Why Geothermal */}
-      <section className="section flex flex-col justify-center items-center px-6 md:px-12 py-12">
-        <div className="w-full max-w-2xl mx-auto">
+      <section className="section flex flex-col justify-center items-center px-4 md:px-12 py-8 md:py-12">
+        <div className="w-full max-w-5xl mx-auto">
           <h2 className="text-sm font-semibold text-green-700 tracking-widest uppercase text-center mb-2">WHY GEOTHERMAL?</h2>
-          <h3 className="text-2xl font-bold text-gray-900 text-center mb-10">The clean energy most people have never discovered.</h3>
+          <h3 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-10">The clean energy hiding beneath your feet.</h3>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Stat 1 */}
             <div className="bg-white border border-gray-200 border-l-4 border-l-green-800 rounded-xl p-4 shadow-sm">
               <div className="text-3xl font-bold text-green-700">400%*</div>
               <div className="text-sm font-semibold text-gray-900 mt-1">System Efficiency</div>
-              <div className="text-xs text-gray-500 mt-2 leading-relaxed">GSHPs deliver 4 units of heat for every 1 unit of electricity consumed — unseen by most clean energy sources.</div>
+              <div className="text-xs text-gray-500 mt-2 leading-relaxed">GSHPs deliver 4 units of heat for every 1 unit of electricity consumed — outperforming solar and wind on efficiency.</div>
             </div>
             {/* Stat 2 */}
             <div className="bg-white border border-gray-200 border-l-4 border-l-green-800 rounded-xl p-4 shadow-sm">
@@ -175,21 +175,21 @@ export default function LandingPage() {
       </section>
 
       {/* SECTION 3 — How it works */}
-      <section className="section flex flex-col items-center justify-center px-4 md:px-12 py-12">
+      <section className="section flex flex-col items-center justify-center px-4 md:px-12 py-8 md:py-12">
         <div className="max-w-2xl w-full mx-auto flex flex-col h-full justify-center">
           <div className="text-center mb-16">
             <h2 className="text-sm font-semibold text-green-700 tracking-widest uppercase mb-4">HOW IT WORKS</h2>
-            <h3 className="text-4xl font-bold text-gray-900">From address to insight</h3>
+            <h3 className="text-2xl md:text-4xl font-bold text-gray-900">From address to insight</h3>
           </div>
 
           <div className="flex flex-col space-y-0">
             {/* Step 1 */}
-            <div className="flex items-start">
-              <div className="flex flex-col items-center mr-6">
+            <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left">
+              <div className="flex flex-col items-center md:mr-6 mb-4 md:mb-0">
                 <div className="w-10 h-10 bg-green-700 text-white font-bold rounded-full flex items-center justify-center flex-shrink-0">1</div>
-                <div className="w-0.5 h-12 bg-green-200 my-2"></div>
+                <div className="hidden md:block w-0.5 h-12 bg-green-200 my-2"></div>
               </div>
-              <div className="pt-1 pb-6">
+              <div className="pt-1 pb-6 md:pb-6">
                 <h4 className="text-xl font-semibold text-gray-900 mb-1">Enter your street address</h4>
                 <p className="text-base text-gray-500 leading-relaxed">
                   We instantly query USGS soil databases, NOAA climate stations, and EPA carbon factors for your exact coordinates.
@@ -198,25 +198,25 @@ export default function LandingPage() {
             </div>
 
             {/* Step 2 */}
-            <div className="flex items-start">
-              <div className="flex flex-col items-center mr-6">
+            <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left">
+              <div className="flex flex-col items-center md:mr-6 mb-4 md:mb-0">
                 <div className="w-10 h-10 bg-green-700 text-white font-bold rounded-full flex items-center justify-center flex-shrink-0">2</div>
-                <div className="w-0.5 h-12 bg-green-200 my-2"></div>
+                <div className="hidden md:block w-0.5 h-12 bg-green-200 my-2"></div>
               </div>
-              <div className="pt-1 pb-6">
+              <div className="pt-1 pb-6 md:pb-6">
                 <h4 className="text-xl font-semibold text-gray-900 mb-1">AI models your subsurface</h4>
                 <p className="text-base text-gray-500 leading-relaxed">
-                  Our Groq-backed AI synthesizes your property's geological factors and fuel type to determine the optimal geothermal system for you.
+                  Our system queries your property's exact USGS soil profile and runs a weighted geological scoring model to select the optimal system — Gemini synthesizes the findings into your personalized report.
                 </p>
               </div>
             </div>
 
             {/* Step 3 */}
-            <div className="flex items-start">
-              <div className="flex flex-col items-center mr-6">
+            <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left">
+              <div className="flex flex-col items-center md:mr-6 mb-4 md:mb-0">
                 <div className="w-10 h-10 bg-green-700 text-white font-bold rounded-full flex items-center justify-center flex-shrink-0">3</div>
               </div>
-              <div className="pt-1 pb-6">
+              <div className="pt-1 pb-6 md:pb-6">
                 <h4 className="text-xl font-semibold text-gray-900 mb-1">Get your personalized report</h4>
                 <p className="text-base text-gray-500 leading-relaxed">
                   Receive your system specs, borehole depth, a full financial breakdown with IRA credits, and your reduced carbon impact — all in under 15 seconds.
@@ -240,16 +240,16 @@ export default function LandingPage() {
       </section>
 
       {/* SECTION 4 — Address Input CTA */}
-      <section className="section flex flex-col items-center justify-center px-6 md:px-12">
+      <section className="section flex flex-col items-center justify-center px-4 md:px-12 py-8 md:py-12">
         <div className="w-full md:max-w-xl mx-auto">
-          <h3 className="text-3xl font-bold text-gray-900 text-center mb-3">Ready to see what's beneath your property?</h3>
-          <p className="text-lg text-gray-500 text-center mb-10">Enter your address below.</p>
+          <h3 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-3">Ready to see what's beneath your property?</h3>
+          <p className="text-base md:text-lg text-gray-500 text-center mb-10">Enter your address below.</p>
           
           <AddressInput 
             defaultAddress=""
             defaultHomeSizeSqft={20000}
             defaultHeatingFuel="gas"
-            defaultAnnualEnergyCost={18000}
+            defaultEnergyCost={18000}
           />
         </div>
       </section>

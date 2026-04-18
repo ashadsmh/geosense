@@ -29,31 +29,12 @@ export default function HomePage() {
   };
 
   return (
-    <main className="relative bg-white text-gray-900 font-sans min-h-screen flex flex-col">
+    <main suppressHydrationWarning className="relative bg-white text-gray-900 font-sans min-h-screen flex flex-col">
       {/* Moving Grid Background */}
-      <div className="grid-bg"></div>
-
-      <style jsx global>{`
-        .grid-bg {
-          position: fixed;
-          inset: 0;
-          background-image: 
-            linear-gradient(#e5e7eb 1px, transparent 1px),
-            linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
-          background-size: 40px 40px;
-          animation: gridMove 20s linear infinite;
-          opacity: 0.4;
-          z-index: 0;
-        }
-
-        @keyframes gridMove {
-          0% { background-position: 0 0; }
-          100% { background-position: 0 40px; }
-        }
-      `}</style>
+      <div className="fixed inset-0 opacity-40 z-0 bg-[linear-gradient(#e5e7eb_1px,transparent_1px),linear-gradient(90deg,#e5e7eb_1px,transparent_1px)] bg-[size:40px_40px] animate-[gridMove_20s_linear_infinite]"></div>
 
       {/* Top Navigation Bar */}
-      <div className="fixed top-0 left-0 right-0 z-50 px-8 py-4 bg-white border-b border-gray-100 flex items-center justify-between">
+      <div className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 py-4 bg-white border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-green-700 rounded-lg flex items-center justify-center flex-shrink-0">
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -76,7 +57,7 @@ export default function HomePage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center pt-20 relative z-10 w-full max-w-7xl mx-auto px-8">
+      <div className="flex-1 flex items-center pt-20 relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8">
         <div className="w-full flex flex-col md:flex-row items-center gap-12">
           
           {/* Left Column (45%) */}
@@ -85,17 +66,15 @@ export default function HomePage() {
               Discover your home's geothermal potential.
             </h1>
 
-            <p className="text-lg text-gray-500 mb-10 leading-relaxed max-w-md">
+            <p className="text-base md:text-lg text-gray-500 mb-10 leading-relaxed max-w-md">
               Enter your address below.
             </p>
 
             <div className="w-full">
               <AddressInput 
-                defaultAddress=""
-                defaultHomeSizeSqft={2000}
-                defaultHeatingFuel="gas"
-                defaultAnnualEnergyCost={1500}
-                enableHomepageTypewriter={true}
+                defaultAddress="Poe Field, Princeton University, Princeton, NJ 08544"
+                defaultLotSize={50000}
+                defaultEnergyCost={18000}
               />
             </div>
 
