@@ -180,4 +180,4 @@ MIT
 
 ## Author
 
-Built by Ashad Shaik-Mohamed at HackPrinceton 2025.
+Built by Ashad Shaik-Mohamed at HackPrinceton 2026.
